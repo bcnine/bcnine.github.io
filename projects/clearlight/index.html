@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Demo</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <form novalidate>
+  <div class="container">
+    <div class="left-controls">
+      <label for="scene">Scene</label>
+      <select id="scene">
+        <option value="face">Face</option>
+        <option value="elephant">Elephant</option>
+        <option value="bed">Bed</option>
+        <option value="gears">Gears</option>
+      </select>
+
+      <label for="background">Background</label>
+      <input type="color" id="background" />
+
+      <label for="cull">Cull Mode</label>
+      <select id="cull">
+        <option value="none">None</option>
+        <option value="back">Back</option>
+        <option value="front">Front</option>
+      </select>
+
+      <label for="projection">Projection</label>
+      <select id="projection">
+        <option value="perspective">Perspective</option>
+        <option value="orthographic">Orthographic</option>
+      </select>
+
+      <label for="depth">Depth Test</label>
+      <input type="checkbox" id="depth" />
+
+      <label for="texturing">Texturing</label>
+      <input type="checkbox" id="texturing" />
+
+      <label for="lighting">Lighting</label>
+      <input type="checkbox" id="lighting" />
+
+      <label for="shadingModel">Shading</label>
+      <select id="shadingModel">
+        <option value="flat">Flat</option>
+        <option value="gouraud">Gouraud</option>
+        <option value="blinnphong">Blinn-Phong</option>
+      </select>
+
+      <label for="light">Light Type</label>
+      <select id="light">
+        <option value="directional">Directional</option>
+        <option value="point">Point</option>
+        <option value="point-visible">Point (show light)</option>
+      </select>
+
+      <label for="ambient">Ambient</label>
+      <input type="color" id="ambient" />
+      <label for="diffuse">Diffuse</label>
+      <input type="color" id="diffuse" />
+      <label for="specular">Specular</label>
+      <input type="color" id="specular" />
+
+      <label for="material">Material</label>
+      <select id="material">
+      </select>
+
+      <label for="material-ambient">Ambient</label>
+      <input type="color" id="material-ambient" />
+      <label for="material-diffuse">Diffuse</label>
+      <input type="color" id="material-diffuse" />
+      <label for="material-specular">Specular</label>
+      <input type="color" id="material-specular" />
+      <label for="material-shininess">Shininess</label>
+      <input type="range" id="material-shininess" min="0.01" max="1.375" value="0.01" step="0.01" />
+
+      <label for="reset-view">View Angles</label>
+      <button type="button" id="reset-view">Clear</button>
+    </div>
+    <canvas class="emscripten" id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+    <div class="bottom-controls">
+      <label for="lightx">Light (X)</label>
+      <input type="range" id="lightx" min="-1" max="1" value="0" step="0.01" />
+      <label id = "fovheight-label" for="fovheight"></label>
+      <input type="range" id="fovheight" min="0.1" max="179.9" value="0" step="0.01" />
+
+      <label for="lighty">Light (Y)</label>
+      <input type="range" id="lighty" min="-1" max="1" value="0" step="0.01" />
+      <label for="near">Near</label>
+      <input type="range" id="near" min="0.1" max="10000.0" value="0" step="0.01" />
+
+
+      <label for="lightz">Light (Z)</label>
+      <input type="range" id="lightz" min="-1" max="1" value="0" step="0.01" />
+      <label for="far">Far</label>
+      <input type="range" id="far" min="0.1" max="10000.0" value="0" step="0.01" />
+    </div>
+  </div>
+  <script type="module" src="index.js"></script>
+  </form>
+</body>
+</html>

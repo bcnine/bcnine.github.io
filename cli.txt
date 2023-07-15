@@ -1,0 +1,2 @@
+ssh bcollins_bcnine@ssh.phx.nearlyfreespeech.net
+scp file bcollins_bcnine@ssh.phx.nearlyfreespeech.net:

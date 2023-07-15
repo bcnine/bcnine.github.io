@@ -1,0 +1,14 @@
+html, body { margin:0; padding: 0; height: 100% }
+
+#left-frame {
+  background-color: #bbbbbb;
+  width : 300px;
+}
+
+#right-frame {
+  width: calc(100% - 300px);
+}
+
+.title {
+  font-size: 3em;
+}

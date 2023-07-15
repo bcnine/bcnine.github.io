@@ -1,0 +1,61 @@
+                <meta charset="utf-8" emacsmode="-*- markdown -*-">
+                            **Clearlight: A Software Rasterizer in WebAssembly**
+                            *(We don't need no stinkin' WebGL!)*
+
+[Try it out!]("/projects/clearlight/index.html") (The demo should work on all evergreen browsers, just give it a few seconds to load)
+
+Nothing scratches that nostalgic itch like getting your old software running again on a modern platform. Years ago, as a budding 3D
+developer, I was fascinated with the mechanics of the rasterization process in graphics. It was becoming borderline obsessive
+though, so I finally built a rasterizer so that I could get some closure and move on with my life.
+
+After going back and forth on requirements, I settled on:
+
+- Sub-pixel correct rasterization
+- Perspective correct interpolation (on all interpolated values)
+- Z buffering
+- Face culling
+- Efficient line clipping ([Jim Blinn]("https://www.amazon.com/Jim-Blinns-Corner-Graphics-Pipeline/dp/1558603875/" target="_blank") ftw!)
+- Point and directional lights (punctual lighting)
+- Vertex, fragment, and triangle shaders
+- Decal texturing
+- Built-in shaders for flat, Gouraud, and Blinn-Phong shading models
+- Cross platform
+
+It worked great (eventually), and I stopped optimizing at around 30 fps for 100k tris (decent for 2006). The renderer was
+written in C++ though, and it was a pain to compile and keep up-to-date with the dependent libraries (wxwidgets for a
+display window and freeimage for loading textures).
+
+Fast forward 12 years... we now have self driving cars, dedicated transistors for raytracing, and WebAssembly. There's probably
+a few other things too, but it's mainly this. [Emscripten]("https://en.wikipedia.org/wiki/Emscripten" target="_blank"), if you're not
+familiar with it, lets you compile code in C/C++/Rust to either optimized javascript (asm.js) or actual WebAssembly, which, if you
+haven't heard of that, is a binary format for a stack-based virtual machine embedded in a web browser. You can now breathe new life
+into those old projects and share them much more easily (no more messy platform binaries!)
+
+To get this going, I did have to alter the framebuffer code to display to an SDL surface, instead of wxwidgets. Emscripten includes a
+special version of SDL2 that converts the surface to an HTML5 canvas. If you use OpenGL ES 2.0/3.0 it will even convert that to WebGL
+1/2 for you! It's really nice to be able to compile the same project in either a web version (for mass consumption) or a platform-specific
+binary (for stepping through in a debugger).
+
+Emscripten actually builds a run-time environment in JavaScript that looks to the executable no different than a typical
+OS environment (e.g. Unix, OS X). A single javascript file contains emulation for a file system, environment variables, memory
+allocation, everything the executable needs. I just find this super impressive. Anyway, I've set things up so that the filesystem is baked
+out into a data bundle, and for this project, that bundle is quite large (~30 MB), so that's the reason for the delay in the loading time.
+
+Finally, I cleaned up the interface a bit, and now the project makes a great demo and also serves as a basic teaching tool, for
+explaining things like, e.g. why it's so important to push your near plane out as far as possible, and the artifacts you may
+see if you don't. Artists seem to relate to a visual demo much more readily than a theoretical aside on the limitations of
+floating point (weird).
+
+Credits:
+
+I've had these models for so long (obj + mtl / textures) that I can't find them on the web anymore, but if you recognize any of them
+please shoot me an email and I'll credit you here!
+
+
+
+
+
+
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

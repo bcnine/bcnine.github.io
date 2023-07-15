@@ -1,0 +1,50 @@
+                <meta charset="utf-8" emacsmode="-*- markdown -*-">
+                            **Radiometry**
+                            *(various notes during some ray-tracing work)*
+
+$$
+\newcommand \diff{\mathop{}\!\mathrm{\,d}}
+\newcommand \Diff[1]{\mathop{}\!\mathrm{d^#1}}
+$$
+
+There are four quantities from radiometry we typically work with in ray tracing. These are flux, irradiance/radiant exitance, intensity, and radiance.
+
+Energy, carried by photons, is measured in Joules. Flux, also called power, is the total amount of energy passing through a region or a surface per unit time, and is defined as the limit as $\Delta t \to 0$ of $\Delta Q/\Delta t$.
+
+Given a finite area $A$, the average density of power over the area is
+
+$$
+  E = \frac{\Phi}{A}
+$$
+
+Depending on which direction this energy is going, it's called either irradiance (E) or radiant exitance (M). Taking the limit of differential power per differential area at a point p we get
+
+$$
+  E(p) = \lim_{\Delta A \to 0} \frac{\Delta \Phi (p)}{\Delta A} = \frac{\diff \Phi (p)}{\diff A}
+$$
+
+Of course we can integrate the irradiance to get back to power:
+
+$$
+  \Phi = \int_{A} E(p) \diff A
+$$
+
+Intensity describes angular density of power, and it's described by
+
+$$
+  I = \lim_{\Delta \omega \to 0} \frac{\Delta \Phi}{\Delta \omega} = \frac{\diff \Phi}{\diff \omega}
+$$
+
+and just like before, we can reverse this to get power:
+
+$$
+  \Phi = \int_{\Omega} I(\omega) \diff \omega
+$$
+
+Note that, in the case of irradiance/radiant exitance we're limiting the power to a differential area. For intensity, we limit to a differential solid angle. For the final quantity, radiance, we limit using both. Irradiance and radiant exitance give us differential power per differential area at a point p, but they don't distinguish the directional distribution of power. Radiance measures irradiance/radiant exitance with respect to a solid angle.
+
+Integrate radiance to get the irradiance.
+
+The biggest advantage so far of being able to interpret integrals is so you have a precise understanding of what we're summing up. You don't have to actually be a bad-ass at solving integrals (although that doesn't hurt). You just need to be able to understand the concept they are communicating.
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>

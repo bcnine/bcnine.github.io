@@ -1,0 +1,86 @@
+                <meta charset="utf-8" emacsmode="-*- markdown -*-">
+                            **Solid Angles**
+                            *(various notes during some ray-tracing work)*
+
+Let's start things off with the concept of a solid angle. Just like angles (in radians) are the ratio of the subtended arc length to radius for circles, solid angles (in steradians) are the ratio of subtended surface area to the square of the radius for spheres.
+
+
+![Figure [solid angle]: Formation of a solid angle](solidangle.jpg width="400px")
+
+Two stationary line segments are shown in the image above, but imagine a single movable line segment anchored at the center of a unit sphere (a sphere with radius $r=1$). If the movable line is allowed to run along the perimeter of a shape some arbitrary distance away from the center, it traces out some surface area on the sphere (represented by the shape's projection on the unit sphere above).
+
+Recall the formula for the area of a sphere as $ 4 \pi r^2 $. If the surface area of the projected shape is $a$, then the solid angle formed is $\omega=a/1^2=a$ steradians. It's important though to note that the original shape itself subtends the same solid angle, so if you imagine the projected shape on the unit sphere shifted outward a distance $d$ (growing in size as it moves outward), we have 
+
+$$
+\begin{align} \label{eq:solang}
+\omega & = a \\
+ & =\frac{A}{ d^2}
+\end{align}
+$$
+
+where A is the (larger) surface area of the projected shape after having been moved outward a distance $d$. We play these games with the projected shape rather than the original shape because it's harder to talk about the surface area of some arbitrarily complicated 3D shape vs. a projection of it onto a sphere. The idea though is that some surface patch very far away from the center may have an enormous surface area, but it's divided by the square of its distance so that the quotient (and hence the solid angle) remains identical to the solid angle formed from its projection onto the unit sphere.
+
+The largest possible solid angle is the one subtending the entire sphere. It has the value
+
+$$
+\begin{align}
+  \omega & = \frac{4\pi d^2}{d^2} \\
+  & = 4\pi
+\end{align}
+$$
+
+The smallest solid angle can be found by differentiating equation \ref{eq:solang} with respect to $A$:
+
+$$
+\begin{align}
+  \frac{d}{dA} \omega & = \frac{d}{dA} \frac{A}{d^2}
+\end{align}
+$$
+
+so that
+
+$$
+\begin{align}
+  \frac{d\omega}{dA} & = \frac{1}{d^2}
+\end{align}
+$$
+
+and multiplying both sides by $dA$ gives
+
+$$
+\begin{align}
+  d\omega & = \frac{dA}{d^2}
+\end{align}
+$$
+
+For a differential patch on the unit sphere ($d=1$), we just have $d\omega = dA$, but we will need this in terms of spherical coordinates later on so let's reformulate $dA$ in terms of $\theta$ and $\phi$:
+
+![Figure [spherical coordinates]: Representation in spherical coordinates](solidanglesp.jpg width="400px")
+
+The coordinates $(\theta,\phi)$ locate the upper left point on $d\omega$. The height of the patch is traced out by a line segment of length 1 moving through an angle $d\theta$, and the width is traced out by a line segment of length $\sin \theta$ moving through an angle of $d\phi$. Using the radian definition of the angle (arclength = $r \theta$), this yields a differential area of 
+
+$$
+  \text{$d\omega =$ $\sin \theta$ $d\theta$ $d\phi$} 
+$$
+
+As a check, we should be able to integrate this over the vertical half circle, and then integrate again by summing that result as it's swept entirely around the y axis:
+
+$$
+\int_{0}^{2\pi} \int_{0}^{\pi} \text{ $\sin \theta$ $d\theta$ $d\phi$ }
+$$
+
+The inner definite integral evaluates to
+
+$$
+- \cos \pi + C - ( - \cos 0 + C ) = 2
+$$
+
+and pulling this constant out of the outer integral, we have
+
+$$
+  2 \int_{0}^{2\pi} d \phi = 4 \pi
+$$
+
+as expected.
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
