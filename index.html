@@ -5,12 +5,18 @@
   <link rel="stylesheet" href="index.css">
 </head>
 
+<script>
+window.addEventListener("message", function(event) {
+    document.title = event.data;
+});
+</script>
+
 <body>
   <iframe id="left-frame" src="menu.html"
           frameborder="0"
           height="100%"
           align="left">
-  </iframe>  
+  </iframe>
 
   <iframe id="right-frame" name="iframe2" src="home.html"
           frameborder="0"
