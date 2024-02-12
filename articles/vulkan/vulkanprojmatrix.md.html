@@ -1,0 +1,245 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<script>parent.registerPage('Vulkan Projection Matrix');</script>
+<style>
+    .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
+</style>
+<style>
+  h1::before, h2::before, h3::before, h4::before, h5::before, h6::before {
+    content: none !important;
+  }
+</style>
+
+**Deriving the Vulkan Projection Matrix**
+
+Introduction
+---
+
+When I first switched from OpenGL to Vulkan, I used the common hack of using the negative viewport and offset to account for Vulkan's Y down. When I went to add in reverse Z functionality to my hobby renderer, it started getting messy, so I just decided to re-derive everything from scratch. Here are all the steps, for both perspective and orthographic matrices. Hopefully you'll find this useful.
+
+Perspective Projection
+---
+
+Let's start with some notation. $(X_e, Y_e, Z_z)$ will be eye coordinates, $(X_c, Y_c, Z_c)$ will be clip coordinates, and $(X_p, Y_p, Z_p)$ will be projected coordinates (coordinates on the near plane).
+
+We want to work out the 4x4 matrix that takes points in eye space to points in clip space:
+
+$$
+\newcommand{\tallest}{\left(-\frac{1}{R_1} - \frac{1}{R_2} \right)}
+\begin{bmatrix}
+  \cdot & \cdot & \cdot & \cdot \\
+  \cdot & \cdot & \cdot & \cdot \\
+  \cdot & \cdot & \cdot & \cdot \\
+  \cdot & \cdot & \cdot & \cdot
+\end{bmatrix}
+
+\begin{bmatrix}
+X_e \\ Y_e \\ Z_e \\ 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+X_c \\ Y_c \\ Z_c \\ W_c
+\end{bmatrix}
+$$
+
+The Intercept Theorem tells us that the ratio between a coordinate in projected space and eye space is the same for each coordinate:
+
+$$
+\frac{Y_p}{Y_e} = \frac{Z_p}{Z_e}
+$$
+
+But we know that $Z_p$ is the negated near plane, since $n$ is the near plane *distance*, and we're looking down the negative $Z$ axis. Therefore
+
+$$
+Y_p = \frac{-n}{Z_e} Y_e = \frac{1}{-Z_e} n Y_e
+$$
+
+and likewise for $X$:
+
+$$
+X_p = \frac{-n}{Z_e} X_e = \frac{1}{-Z_e} n X_e
+$$
+
+The perspective divide that happens in hardware can be used to work around the fact that when multiplying a vector by a matrix, there's no way to divide by a component. The hardware will divide $X_c, Y_c, Z_c$, and $W_c$ by $W_c$. Ok, so we know then what the clip space w component $W_c$ should be then, it's simply $-Z_e$. Why? Well note that dividing by $-Z_e$ is exactly what we want to achieve to get from eye coordinates to projected coordinates.
+
+So now we can fill out the final row to accomplish this divide:
+
+$$
+\newcommand{\tallest}{\left(-\frac{1}{R_1} - \frac{1}{R_2} \right)}
+\begin{bmatrix}
+  \cdot & \cdot & \cdot & \cdot \\
+  \cdot & \cdot & \cdot & \cdot \\
+  \cdot & \cdot & \cdot & \cdot \\
+  0 & 0 & -1 & 0
+\end{bmatrix}
+
+\begin{bmatrix}
+X_e \\ Y_e \\ Z_e \\ 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+X_c \\ Y_c \\ Z_c \\ W_c
+\end{bmatrix}
+$$
+
+Normalized Device Coordinates (NDC) are clip space coordinates divided by their $w$ component. This is why they're called "normalized" (similar to normalizing a vector by dividing all the coordinates by length).
+
+$$
+\newcommand{\tallest}{\left(-\frac{1}{R_1} - \frac{1}{R_2} \right)}
+\begin{bmatrix}
+  X_n \\
+  Y_n \\
+  Z_n \\
+  W_n
+\end{bmatrix}
+
+=
+\begin{bmatrix}
+X_c/W_c \\ Y_c/W_c \\ Z_c/W_c \\ 1
+\end{bmatrix}
+$$
+
+The near plane of the viewing frustum is defined by the 4 points (starting from upper left and going clockwise):
+
+$$
+(l, t),
+(r, t),
+(r, b),
+(l, b)
+$$
+
+and since Vulkan is Y down, we want an NDC mapping like so:
+
+$$
+(l, t) => (-1, -1)
+$$
+$$
+(r, t) => (1, -1)
+$$
+$$
+(r, b) => (1, 1)
+$$
+$$
+(l, b) => (-1, 1)
+$$
+
+Setting up a linear system for this and solving, we get
+
+$$
+X_n = \frac{2}{r-l} X_p - \frac{r + l}{r - l}
+$$
+$$
+Y_n = \frac{2}{b-t} Y_p - \frac{b + t}{b - t}
+$$
+
+Substituting formulas for $X_p$ and $Y_p$, we have
+
+$$
+X_n = \frac{2}{r-l} \left( \frac{n Y_e}{-Z_e} \right) - \frac{r + l}{r - l}
+$$
+
+and factoring out $1/-Z_e$, we get
+
+$$
+X_n = \frac{1}{-Z_e} \left( \frac{2n}{r-l} \right) X_e + \frac{r + l}{r - l} Z_e
+$$
+
+and same for $Y_n$
+
+$$
+Y_n = \frac{1}{-Z_e} \left( \frac{2n}{b-t} \right) Y_e + \frac{b + t}{b - t} Z_e
+$$
+
+But recall $X_c = X_n W_c$ and $Y_c = Y_n W_c$, so now we're able to fill out the first 2 rows of our eye-to-clip matrix:
+
+$$
+\newcommand{\tallest}{\frac{2n}{r-l}}
+\begin{bmatrix}
+  \frac{2n}{r-l} & 0 & \frac{r+l}{r-l} & 0 \\
+  0 & \frac{2n}{b-t} & \frac{b+t}{b-t} & 0 \\
+  \cdot & \cdot & \cdot & \cdot \\
+  0 & 0 & -1 & 0
+\end{bmatrix}
+
+\begin{bmatrix}
+\vphantom { \tallest } X_e \\ \vphantom { \tallest } Y_e \\ Z_e \\ 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+\vphantom { \tallest } X_c \\ \vphantom { \tallest } Y_c \\ Z_c \\ W_c
+\end{bmatrix}
+$$
+
+Ok, next, on to z. We know we want to encode z to go from 1 to 0 since we're doing reverse z. Hopefully it's clear we don't really need to use x and y values, so our third row will look something like $(0, 0, A, B)$. We just need to figure out $A$ and $B$.
+
+We know
+
+$$
+Z_n = \frac{Z_c}{W_c} = \frac{A Z_e + B W_e}{-Z_e}
+$$
+
+But eye space always has a w component of 1, so this simplifies to
+
+$$
+Z_n = \frac{A Z_e + B}{-Z_e}
+$$
+
+So when $Z_n = 1$ we know that $Z_e$ must have been $-n$ (recall $n$ is positive). Basically, when eye z is on the near plane, $Z_n = 1$. Likewise, when $Z_n = 0$, $Z_e$ must be -far, so
+
+$$
+\frac{A(-n)+B}{-(-n)} = 1
+$$
+
+$$
+\frac{A(-f)+B}{-(-f)} = 0
+$$
+
+so therefore
+
+$$
+A(-n) + B = n
+$$
+
+$$
+A(-f) + B = 0
+$$
+
+and we have
+
+$$
+A = \frac{n}{f-n}
+$$
+
+$$
+B = \frac{nf}{f-n}
+$$
+
+Finally, we have
+
+$$
+Z_n = \frac{1}{-Z_e} \left( \frac{n Z_e}{f-n} + \frac{nf}{f-n} \right)
+$$
+
+As before, we can see that the expression in the parentheses is equal to $Z_c$, so with that, we can finally build the complete matrix
+
+$$
+\newcommand{\tallest}{\frac{2n}{r-l}}
+\begin{bmatrix}
+  \frac{2n}{r-l} & 0 & \frac{r+l}{r-l} & 0 \\
+  0 & \frac{2n}{b-t} & \frac{b+t}{b-t} & 0 \\
+  0 & 0 & \frac{n}{f-n} & \frac{nf}{f-n} \\
+  0 & 0 & -1 & 0
+\end{bmatrix}
+
+\begin{bmatrix}
+\vphantom { \tallest } X_e \\ \vphantom { \tallest } Y_e \\ Z_e \\ 1
+\end{bmatrix}
+=
+\begin{bmatrix}
+\vphantom { \tallest } X_c \\ \vphantom { \tallest } Y_c \\ Z_c \\ W_c
+\end{bmatrix}
+$$
+
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+
