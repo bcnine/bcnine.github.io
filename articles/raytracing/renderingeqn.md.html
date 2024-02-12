@@ -1,0 +1,138 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<script>parent.registerPage('Spectral Energy');</script>
+<style>
+    .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
+</style>
+<style>
+  h1::before, h2::before, h3::before, h4::before, h5::before, h6::before {
+    content: none !important;
+  }
+</style>
+
+**Deriving the Rendering Equation**
+
+Introduction
+---
+
+Just about anyone who has an interest in graphics programming has come across the rendering equation at one time or another. But where does it come from? It turns out that it's pretty easy to derive from first principles, so let's see what that looks like, starting from the most basic radiometric definitions.
+
+Spectral Energy
+---
+
+Spectral energy refers to how energy is distributed across different wavelengths of light. This distribution is typically expressed as a density function, which describes the amount of energy in the neighborhood of a given wavelength.
+
+It's helpful to consider an actual device you might construct that has a sensor that measures light energy, with a colored filter over it that only lets in light within a narrow spectrum $d\lambda$. If the device measures a spectral energy $dq$ around $d \lambda$, then we can express the spectral energy density as
+
+$$
+u(\lambda) = \frac{dq}{d \lambda}
+$$
+
+so that we can solve for the total energy $Q$ by integrating the density function with respect to $\lambda$.
+
+Radiant Flux
+---
+
+The next unit to consider is radiant flux, aka radiant power or just "power". It is energy per unit time (in seconds), and the spectral version is measured in watts per nm and denoted by $\Phi$:
+
+$$
+\Phi = \frac{dq}{dt \space d \lambda}
+$$
+
+Note that 1 watt = 1 Joule per second. We include $d \lambda$ in here, which technically makes this spectral power. While "spectral" values are technically what we're after, it will eventually get cumbersome to keep mentioning them explicitly, so we'll just omit them from here on out and assume they're there.
+
+Irradiance
+---
+
+Next up is irradiance E, which is the flux density that arrives at a surface from all directions (typically over the hemisphere), denoted by:
+
+$$
+E = \frac{d \Phi}{dA} \tag{1}
+$$
+
+where $\Phi$ is radiant flux (also called radiant power).
+
+Radiance
+---
+
+Finally, we have radiance $L$, which considers a differential chunk of irradiance coming from a differential solid angle $\omega$. It is the flux density per solid angle per projected surface area. The "projected" here refers to the fact that we're projecting the surface's area onto the planar area patch perpendicular to the ray corresponding to the differential solid angle $\omega$. It looks like this:
+
+$$
+L = \frac{d^2 \Phi}{dA^{\perp} \space d \omega} \tag{2}
+$$
+
+where the projected surface area $dA^{\perp} = \cos \theta \space dA$. As the angle between $dA^{\perp}$ and the surface normal increases, $dA^{\perp}$ correlates with a larger and larger surface area $dA$. This is Lambert's cosine law in action.
+
+The Reflection Equation
+---
+
+Substituting our definition of the projected surface area into (2), we have
+
+$$
+L = \frac{d^2 \Phi}{dA \space \cos \theta \space d \omega} \tag{3}
+$$
+
+Assuming the radiance is inbound, we can rewrite (3) as
+
+$$
+L_i \cos \theta = \frac{d}{d \omega} \left ( \frac{d \Phi}{dA} \right) = \frac{d}{d \omega} E = \frac{dE}{d \omega}
+$$
+
+so that
+
+$$
+dE = L_i \cos \theta \space \d \omega \tag{4}
+$$
+
+according to the definition of $E$.
+
+Now that we've established the connection between $dE$ and $L_i$, I want to show how $dE$ is related to $L_o$, so that we can finally see how $L_o$ relates to $L_i$.
+
+Because the optical properties of materials are linear, irradiance and radiance are proportional. For example, if the irradiance seen by a surface patch was doubled, the reflected radiance in a given direction would also double. Hence:
+
+$$
+d L_o \propto dE
+$$
+
+But what is the constant of proportionality? Well, for all but the simplest cases (e.g. perfect diffuse reflection) it's only really a "constant" when we select a given incoming and outgoing direction.
+
+In other words, generally speaking, this proportionality term can vary with incoming direction, outgoing direction, position on the surface, etc. To model this, we can define a function of the incoming and outgoing directions (and other variables as well if we like) which evaluates to this constant, which we'll call $f_r(w_i, w_o)$. Here we're just modeling the function in terms of incoming and outgoing direction vectors.
+
+It turns out that this function is able to completely characterize a material's response to incoming radiance. If we're modeling reflectance only, we call this term the BRDF (bidirectional reflectance distribution function). Other variations on this general term are BTDF (for transmission), and BSDF (for scattering), and these account for additional behaviors beyond just basic reflection. For now, we'll just stick with the basic BRDF. So the BRDF $f_r$ is, as mentioned, the "constant" of proportionality between dL_o and dE:
+
+$$
+d L_o = f_r \cdot dE
+$$
+
+and (4) allows us to express this as
+
+$$
+d L_o = f_r \cdot L_i \cos \theta \space d \omega
+$$
+
+This relates a differential bit of outgoing radiance to incoming radiance. Intuitively it should be clear that the outgoing radiance is the sum of all the incoming $L_i$ over the hemisphere. We can calculate this sum by integrating over the appropriate region (a hemisphere if we're strictly dealing with reflection):
+
+$$
+L_o = \int_{2 \pi +} f_r \space L_i \cos \theta \space d \omega
+$$
+
+This is known as the reflection equation. The $2 \pi +$ indicates that the domain is over the solid angle corresponding to the positive hemisphere (the hemisphere above the surface patch).
+
+The Rendering Equation
+---
+
+To get to the full rendering equation, all we need to do is additionally account for an emissive term. That is, in addition to the reflectance, we also need to consider radiance eminating directly from the point $p$ for which we're computing the reflected radiance:
+
+$$
+L_o = L_e + \int_{2 \pi +} f_r \space L_i \cos \theta \space d \omega
+$$
+
+References
+---
+
+* Physically Based Rendering: From Theory To Implementation, Pharr et al (4th Ed)
+* Fundamentals of Computer Graphics, Marschner & Shirley (5th Ed)
+* Ray Tracing From the Ground Up, Suffern (1st Ed)
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+
