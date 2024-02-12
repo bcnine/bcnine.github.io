@@ -151,7 +151,7 @@ p(\theta, \phi) &= \frac{\cos \theta \sin \theta}{\pi} \notag \\
 \end{align}
 $$
 
-from which we can see that $p(w) = \cos \theta/\pi$, so that, in fact, we really are sampling from a cos theta distribution, as expected. It's important to note that we must always be aware of what we're defining the density function with respect to. Pharr et al mention that they always return directional PDF's with respect to solid angle (so in this case, $p(w) = \cos \theta/\pi$, rather than $p(\theta, \phi) = \cos \theta \sin \theta / \pi$).
+from which we can see that $p(w) = \cos \theta/\pi$, so that, in fact, we really are sampling from a $\cos \theta$ distribution, as expected. It's important to note that we must always be aware of what we're defining the density function with respect to. Pharr et al mention that they always return directional PDF's with respect to solid angle (so in this case, $p(w) = \cos \theta/\pi$, rather than $p(\theta, \phi) = \cos \theta \sin \theta / \pi$).
 
 So that's it, we now have a way to draw direction samples from a $\cos$ distribution, and we can also evaluate the PDF for those samples to weight them accordingly. This allows us to both generate samples, and to evaluate the estimator to calculate the weight of the sample.
 
