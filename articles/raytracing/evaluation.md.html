@@ -1,0 +1,178 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<script>parent.registerPage('Rendering Equation');</script>
+<style>
+    .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
+</style>
+<style>
+  h1::before, h2::before, h3::before, h4::before, h5::before, h6::before {
+    content: none !important;
+  }
+</style>
+
+**Evaluating The Rendering Equation**
+
+---
+
+Now that we have an actual function for the BRDF, we have something to compute, and the approach we use to compute the integral will be discussed next.
+
+For reference, here is the full rendering equation
+$$
+L_o = L_e + \int_{2 \pi +} f_r \space L_i \cos \theta \space d \omega \tag{1}
+$$
+
+Notice that the output radiance is defined in terms of an integral involving an incoming radiance. We'd like to express this in terms of an outgoing radiance as well, so the recursive nature is more obvious.
+
+The key idea is to make use of the fact that the incoming radiance along $-w_i$ at point $p$ is the same as the outgoing radiance from $w_i$ direction eminating from point $p'$, where $p'$ is the hitpoint of a ray cast from p along $-w_i$ (if this ray hits nothing then radiance is just 0).
+
+Thanks to this equivalence, we can rewrite (1) as
+
+$$
+L_o = L_e + \int_{2 \pi +} f_r \space L_o (raycast(p, w_i), -w_i) \cos \theta \space d \omega \tag{1}
+$$
+
+Here we can start to see the recursion at work, but let's be a bit more explicit
+
+$$
+\begin{align}
+L_o &= L_e + I(fc * L_o) \notag \\
+    &= L_e + I(fc * (L_e + I(fc * L_o))) \notag \\
+    &= L_e + I(fc * (L_e + I(fc * (L_e + I(fc * L_o))))) \notag \\
+    &= \cdots \notag
+\end{align}
+$$
+
+where $I$ represents integration and $fc$ represents the combined BRDF and $\cos$ terms. Now, admittedly, we've taken some liberties here with the notation, but ignoring that for the moment, let's go over what's actually happening from a physical perspective.
+
+We shoot a ray outward from our focal point, through a pixel, and we hit a surface point. We want to solve for the outgoing radiance $L_o$ from that surface point, as that's the radiance we use to color the pixel. If we skip the integral entirely, and just use the first L_e term, then we'd end up with an image where we see black everywhere except where our rays directly hit the light sources in the scene.
+
+If we use the first $L_e$ term and approximate $L_o$ with $L_e$ after only a single iteration, we end up with
+
+$$
+L_o = L_e + I(fc * L_e)
+$$
+
+This will actually give a nice image, with shading, but we won't get any color bleeding from one object onto another. So the main question here is when to halt the recursion by using $L_o = L_e$. Once we do this, we end up with something that we can actually compute.
+
+It should hopefully be clear that these integrals are incredibly complex, and nearly impossible to evaluate analytically, so we'll need use numerical integration here. Monte Carlo is a nice choice in this case because it works well with infinite dimensional integrals like this.
+
+There are two obvious ways to proceed from here. We could, every time we need to process an integral, simply generate some number of direction samples (recall that the integrals are over the hit point hemisphere), and recursively process each of them in turn, until we compute our final estimate for a given pixel. However, the time it takes to process even a single pixel at a time like this can vary wildly, from seconds to minutes or even longer.
+
+Modern operating systems have a GPU watch dog timer so that, if the GPU appears unresponsive, the offending process can be halted. If, while working on a pixel, our integral evaluation time exceeds this time duration, our process will be shut down. There are ways to disable this, but fortunately there is a better approach.
+
+Instead of attempting to solve the entire integral for each pixel in a single pass, we can instead accumulate the results one ray at a time as it traverses the scene. In other words, we scan through the entire image N times, each time shooting just a single ray per pixel.
+
+This single ray hits a point, we then take a sample for the new direction, shoot another ray, etc. until we terminate. Along the way, we record the radiance the pixel sees for iteration $i$ and add it to the value accumulated over the previous $i-1$ frames. So for each frame of rendering, we're shooting a single ray from each pixel, which bounces through the scene gathering radiance.
+
+In this way, a given pixel ends up with an accumulated radiance value summed up over $N$ frames, and dividing the sum by $N$ gives an average radiance value. A nice side effect of averaging like this is that we get a form of antialiasing along the way, and it turns out we can avoid the issue of how to deal with mip levels when ray tracing if we go this route.
+
+Performing the integral sum over $N$ frames like this means that, for each iteration, we're really just evaluating the function itself. This means that, instead of computing
+
+$$
+    L_o = L_e + I(fc * (L_e + I(fc * (L_e + I(fc * (L_e + I(fc * (L_e + I(fc * L_e)))))))))
+$$
+
+we're instead computing
+
+$$
+    L_o = L_e + fc * (L_e + fc * (L_e + fc * (L_e + fc * (L_e + fc * L_e))))
+$$
+
+and if we assume that none of the objects are emissive (a common case), this reduces to
+
+$$
+\begin{align}
+    L_o &= fc * fc * fc * fc * fc * L_e \notag \\
+        &= throughput * L_e \notag
+\end{align}
+$$
+
+and finally we can see that all we're really doing is multiplying BRDF attenuation factors that will be applied to the radiance the ray ultimately sees at the end of its trip (either an omnilight/skybox, area light, etc).
+
+We've used the term $throughput$ here to reflect this accumulated BRDF term, as that's the term used in the reference path tracer chapter of _Ray Tracing Gems 2_, and indeed, you can see there that throughput is either multiplied by current brdfweight (multiplying current $fc$ by accumulated $fc$ terms) or multiplied by radiance (the innermost $fc * L_e$).
+
+So really, after we understand the geometry of all this, the tracing of the rays, etc., all we're mainly concerned about here is evaluating BRDF's, and indeed that's where pretty much all the effort goes.
+
+Now we know that because we're doing this single-ray-at-a-time / accumulation approach, we can drop the integral sign, since it's implied by the accumulation. That leaves us with having to evaluate
+
+$$
+    f_r \cos \theta
+$$
+
+Monte Carlo tells us that
+
+$$
+\int f(x) dx \approx \frac{1}{n}\sum_{j=1}^{n} \frac{f(x_j)}{p(x_j)}
+$$
+
+Let's stick with our perfectly diffuse BRDF for now, and let's also include the $\cos \theta$ term that's part of the rendering equation (so $f_r = \rho/\pi \cos \theta$). We are free to use whatever $p(x)$ we like, as long as it's non-zero where $f$ is non-zero, and the integral sums to 1.
+
+Notice that if we follow these rules, and we pick $p(x) = \cos \theta / \pi$, then
+
+$$
+\frac{f(x)}{p(x)} = \frac{\frac{\rho \cos \theta}{\pi}}{\frac{\cos \theta}{\pi}} = \rho = diffuse \space reflectance
+$$
+
+So this means as long as we sample ray directions according to $\cos \theta / \pi$, we can just return the diffuse reflectance constant for $f_r$!
+
+At this point, we're almost ready to code all this up, but we still need to understand how to draw the samples themselves. Because the Monte Carlo technique requires us to draw samples randomly, we're going to need a way to generate random numbers. For now, we'll just assume the typical pseudo-random number routines available on a computer, which generate values in the [0,1] range.
+
+Since there isn't typically the equivalent of C/C++'s rand() for most shader languages, we generate random numbers there in other ways, e.g. by using some form of low discrepancy sequence. These are an interesting alternative to pure RNG's, and the corresponding theory for them is called Quasi-Monte Carlo, but that is outside the scope of this introductory discussion. (It does turn out though that Quasi-Monte Carlo is very effective, and you'll likely want to explore implementing this eventually).
+
+So we've established how we're getting our (pseudo) random numbers now. We can generate 1D samples on a line, 2D samples in a square, etc. The BRDF equation involves directions though, so to be able to evaluate BRDF's using Monte Carlo, we'll need to generate directions according to a given distribution.
+
+For example, in the Monte Carlo discussion above, we observed that if we sample from the distribution $\cos \theta / \pi$, evaluating the BRDF means simply returning the diffuse reflectance!
+
+So how do we sample directions according to this distribution? Let's start with the easier problem of how to sample uniformly from the unit circle. One obvious way to begin is to simply take 2 uniform samples, using the computer's RNG. This yields 2 values in the range [0,1]. Multiply by 2 and subtract 1, to get values in the range [-1,1].
+
+Now simply evaluate whether the resulting coordinates are inside the unit circle (yes if $x^2 + y^2 < 1$). Hopefully it's clear that these are uniformly distributed, but we waste time generating samples that may be rejected. We'd like to make use of every sample we generate.
+
+In order to be able to use every sample, we'll want to warp the square into the circle in some way. We'd like this warping to be _area preserving_. In other words, we'd like that the ratio of some transformed chunk of circle area to original chunk area on the square is similar to the ratio of the total circle area to total square area.
+
+It would also be preferable to distort the warping as little as possible. Finally, we want to ensure that nearby points on the square map to nearby points on the circle, because e.g. if we've made some improvement to the Monte Carlo convergence by ensuring a particular sampling pattern in one domain, we'd like those properties to be preserved after warping.
+
+Shirley and Chiu in _A Low Distortion Map Between Disk and Square_ presented a square to circle mapping with all of these properties. The basic idea is to divide the square into 4 regions bounded by the lines x = y and x = -y. For the case of $x > |y|$, for a fixed value of $x$, $y$ varies from $x$ (slope 1) to $-x$ (slope -1), and if we scale this by $\pi/4$, then e.g. at $x=1$ we can see how this warps the right edge of the unit square to the arc of the unit circle between $-\pi/4$ and $\pi/4$. Furthermore, the square edge at smaller values of $x$ maps to smaller concentric arcs. By symmetry then, we're warping concentric squares to concentric circles (and vice versa).
+
+The algorithm presented considers each of the 4 sections explicitly, but Dave Cline contributed an optimization that shortens the code considerably, and a slight variation of that is what is presented in pbr 3rd ed., so we'll use that.
+
+Shirley and Chiu's paper also discusses applications of this disk sampling algorithm. They specifically discuss how to sample directions over a hemisphere using a $\cos$ distribution, which is exactly our use case. The basic idea is to randomly select a point on the unit circle, and then simply project that point upward onto the hemisphere. The associated point on the hemisphere defines a direction vector sampled from a $\cos$ distribution.
+
+That's all well and good, but how to see this? For a given disk sample, draw a line from the origin to the sample. if we take a vertical slice of the surrounding hemisphere, where the slice plane contains the line, then the problem becomes 2D. Referring to
+
+![cos-distribution](cos-distribution.png "cos-distribution")
+
+we can see that if we project x axis uniform samples upward to where they intersect with the circular slice, we generate a set of points on the circle. for this slice then, our direction vectors point from the origin to those generated points, and the distribution seems to resemble what we'd expect from a $\cos$ distribution, namely increasing samples as we get closer to the z axis (surface normal). Indeed, the spherical to cartesian mapping for $z$ is simply $r \cos \theta = \cos \theta$ (since $r = 1$ here).
+
+Pharr et al calculate the resulting PDF analytically from the approach described above, by calculating the Jacobian of the $(\sin \theta, \phi)$ -> $(\theta, \phi)$ transform (using $r = \sin \theta$, from the vertical projection step)
+
+$$
+\begin{align}
+p(\theta, \phi) &= \frac{\cos \theta \sin \theta}{\pi} \notag \\
+&= \sin \theta \space p(w) \notag
+\end{align}
+$$
+
+from which we can see that $p(w) = \cos \theta/\pi$, so that, in fact, we really are sampling from a cos theta distribution, as expected. It's important to note that we must always be aware of what we're defining the density function with respect to. Pharr et al mention that they always return directional PDF's with respect to solid angle (so in this case, $p(w) = \cos \theta/\pi$, rather than $p(\theta, \phi) = \cos \theta \sin \theta / \pi$).
+
+So that's it, we now have a way to draw direction samples from a $\cos$ distribution, and we can also evaluate the PDF for those samples to weight them accordingly. This allows us to both generate samples, and to evaluate the estimator to calculate the weight of the sample.
+
+It's slightly confusing because we use the term "weight" in multiple contexts. On the one hand, the PDF can be seen as a weight applied to the sample to keep it unbiased, while on the other hand the literature talks about the "weight" as being the value of the Monte Carlo estimator overall (optimized BRDF+PDF combo), so just be aware of this.
+
+Anyway, once we're able to generate these weights, we can trace rays using our API of choice, accumulating (that is, multiplying together) weights along the path, so that when we have acquired all radiance and are ready to terminate the path, the pixel sees the gathered radiance attenuated by all the surface BRDF weights along the way.
+
+Sources of radiance can be area lights, a skybox, etc. Note that rays can pick up radiance at any point along the way, due to e.g. area emitters, and don't have to terminate at a source of radiance; that's just what happens if the ray has no more hits and we're using some sort of sky box as the atmospheric light.
+
+So as a quick recap, we use some API (e.g. Vulkan, DirectX12) to set up the ray tracing, get the scene into video memory, etc, and initiate the ray tracing process starting from the "film plane". This article has laid out the theory of how to proceed from that point on. We shoot a jittered ray from each pixel, gathering radiance, attenuating it, and finally accumulating it in a running pixel buffer.
+
+For every frame we render, we're dividing the value in the accumulation buffer by the number of frames rendered, to get a smoothed/average radiance value, and that's what we store in the frame buffer (which is distinct from the accumulation buffer). If we've set things up properly, the Monte Carlo algorithm should converge toward a solution to the rendering equation (but of course there will always be some error).
+
+References
+---
+
+* Physically Based Rendering: From Theory To Implementation, Pharr et al (4th Ed)
+* Fundamentals of Computer Graphics, Marschner & Shirley (5th Ed)
+* Ray Tracing From the Ground Up, Suffern (1st Ed)
+* Ray Tracing Gems 2, Haines et al (1st Ed)
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+

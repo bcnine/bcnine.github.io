@@ -1,5 +1,5 @@
 <meta charset="utf-8" emacsmode="-*- markdown -*-">
-<script>parent.registerPage('Vulkan Projection Matrix');</script>
+<script>parent.registerPage('Vulkan Perspective Projection Matrix');</script>
 <style>
     .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
 </style>
@@ -9,14 +9,14 @@
   }
 </style>
 
-**Deriving the Vulkan Projection Matrix**
+**Deriving the Vulkan Perspective Projection Matrix**
 
 Introduction
 ---
 
-When I first switched from OpenGL to Vulkan, I used the common hack of using the negative viewport and offset to account for Vulkan's Y down. When I went to add in reverse Z functionality to my hobby renderer, it started getting messy, so I just decided to re-derive everything from scratch. Here are all the steps, for both perspective and orthographic matrices. Hopefully you'll find this useful.
+When I first switched from OpenGL to Vulkan, I used the common hack of using the negative viewport and offset to account for Vulkan's Y down. When I went to add in reverse Z functionality to my hobby renderer, it started getting messy, so I just decided to re-derive everything from scratch. Hopefully you'll find this useful.
 
-Perspective Projection
+Perspective Projection Matrix
 ---
 
 Let's start with some notation. $(X_e, Y_e, Z_z)$ will be eye coordinates, $(X_c, Y_c, Z_c)$ will be clip coordinates, and $(X_p, Y_p, Z_p)$ will be projected coordinates (coordinates on the near plane).

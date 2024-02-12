@@ -1,0 +1,113 @@
+<meta charset="utf-8" emacsmode="-*- markdown -*-">
+<script>parent.registerPage('Rendering Equation');</script>
+<style>
+    .md .longTOC, .md .mediumTOC, .md .shortTOC { display: none; }
+</style>
+<style>
+  h1::before, h2::before, h3::before, h4::before, h5::before, h6::before {
+    content: none !important;
+  }
+</style>
+
+**A Closer Look at the BRDF**
+
+---
+
+Now that we have the full rendering equation
+
+$$
+L_o = L_e + \int_{2 \pi +} f_r \space L_i \cos \theta \space d \omega
+$$
+
+let's take a closer look at $f_r$, with a specific example so we can actually have something to compute.
+
+We'll start with a simple material model which only models diffuse (or Lambertian) reflection. in the Lambertian model, reflected flux is proportional to the cosine of the angle between the flux direction and the surface normal. So imagine a lit surface patch dA. The exact incident lighting is unimportant here, the point is that some irradiance is being applied to dA over its hemisphere.
+
+If dA is on a Lambertian surface, and we are given that the amount of reflected flux along the surface normal at dA is $\Phi^{\perp}$ (a reasonable notation since the normal is perpendicular to the surface), then Lambert's law tells us that the reflected flux at some arbitrary angle theta from the normal is
+
+$$
+\Phi_{\theta} = \Phi^{\perp} \cos \theta
+$$
+
+This means that, given 2 angles $\theta_1$ and $\theta_2$, we have
+
+$$
+\Phi^{\perp} = \frac{\Phi_{\theta_1}}{\cos \theta_1} = \frac{\Phi_{\theta_2}}{\cos \theta_2}
+$$
+
+and because of this, the radiance values are identical
+
+$$
+L_1 = \frac{d^2 \Phi_{\theta_1} } {dA \cos \theta_1 \space dw_1} = \frac{d^2 \Phi_{\theta_2} } {dA \cos \theta_2 \space dw_2} = L_2
+$$
+
+Note that we consider $dw$ = $dw_1$ = $dw_2$ here, because although the directions are different, the differential solid angles are the same and that's what we care about here. The $d^2$ is just following the established notation for second partial derivative, but you can still think of it as a differential chunk of radiant flux. So the only terms that vary are $\Phi_{\theta_1}$, $\Phi_{\theta_2}$ and $\cos \theta_1$, $\cos \theta_2$, and we just showed those ratios are equal, so therefore $L_1 = L_2$.
+
+So a perfectly diffuse surface reflects radiance equally in all directions. Not *flux*, but radiance.
+
+At first glance, this can be a bit confusing. There a two ways of thinking about this. From a viewer's perspective at, say, a grazing angle, consider a differential solid angle that "sees" only this surface (otherwise it's awkward, e.g. the solid angle includes other surfaces, background, etc). The flux is of course attenuated by the angle, but the solid angle covers a larger area of the surface that it would when oriented directly downward, such that the two effects cancel and the radiance is the same as that experienced in a direction directly above the surface patch looking down.
+
+From the patch's perspective, we hold dA fixed as angle moves toward grazing, and again flux drops, but now the projected area perpendicular to solid angle direction also decreases, which holds radiance constant (since this projected area term is in the radiance denominator).
+
+So for the viewer case, the flux is reducing but the surface area is increasing, and the two effects cancel. For the patch case, the flux is again reducing but the projected surface area is decreasing, and since it's in the denominator, it again cancels the effect of the reducing flux.
+
+Another intuition is to just look directly at the radiance $L_1$ (or $L_2$). We know that
+
+$$
+d^2 \Phi_{\theta_1} = d^2 \Phi_{\perp} \cos \theta_1
+$$
+
+and it should be clear that the $\cos$ terms cancel, leaving
+
+$$
+L_1 = L_2 = \frac{d^2 \Phi^{\perp} }{dA \space dw }
+$$
+
+Again, even though $w_1$ and $w_2$ have different directions, only the solid angle value in steradians is relevant here, so $dw_1 = dw_2 = dw$.
+
+Reflectance is defined as the ratio of radiosity to irradiance
+
+$$
+\rho = \frac{B}{E}
+$$
+
+It should be fairly obvious that 0 <= rho <= 1, that is, we can't reflect more flux than we receive, and we can't reflect negative flux.
+
+Intuitively, considering the finite solid angle here (in this case the hemisphere about the point p) it should be fairly obvious that we can characterize the ratio of reflected flux to incident flux in this way. Because both the numerator and denominator have the same units (flux per area), rho is a dimensionless quantity.
+
+The radiosity can be related to exitant radiance in the same way as irradiance is related to incident radiance and for the case of a perfectly diffuse surface, we see that
+
+$$
+B = \int_{2 \pi} L_o \cos \theta \space dw = L_o \int_{2 \pi} \cos \theta \space dw = L_o \pi
+$$
+
+Note that we're able to pull $L_o$ outside the integral because radiance is equal in all directions for perfectly diffuse surfaces, as shown above, and hence is independent of direction $w$. I'll explain the integral calculation in a bit, but the important thing here is that
+
+$$
+B = L_o \pi = \rho E
+$$
+
+which means
+
+$$
+L_o = \frac{\rho}{\pi} E
+$$
+
+and hence
+
+$$
+L_o = \frac{\rho}{\pi} \int_{2 \pi} L_i \cos \theta \space dw = \int_{2 \pi} \frac{\rho}{\pi} L_i \cos \theta \space dw
+$$
+
+and now we can finally see that the $\rho / \pi$ term corresponds to the BRDF $f_r$. So it should be clear that $f_r$ for a perfectly diffuse material is independent of incoming and outgoing directions $w_i$ and $w_o$. $\rho$ corresponds to the material color, also known as the base color or albedo.
+
+References
+---
+
+* Physically Based Rendering: From Theory To Implementation, Pharr et al (4th Ed)
+* Fundamentals of Computer Graphics, Marschner & Shirley (5th Ed)
+* Ray Tracing From the Ground Up, Suffern (1st Ed)
+
+
+<!-- Markdeep: --><style class="fallback">body{visibility:hidden;white-space:pre;font-family:monospace}</style><script src="markdeep.min.js"></script><script src="https://casual-effects.com/markdeep/latest/markdeep.min.js?"></script><script>window.alreadyProcessedMarkdeep||(document.body.style.visibility="visible")</script>
+
